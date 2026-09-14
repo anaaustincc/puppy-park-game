@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Puppy Park | Find Your Way Home</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="vendor/phaser.min.js"></script>
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">P</span><span>PUPPY PARK</span></div>
+        <div class="objective"><span class="objective-dot"></span><span id="objective-text">Find your mom</span></div>
+        <div class="controls-hint">WASD / ARROWS <span>•</span> E TO TALK</div>
+      </header>
+      <section class="game-frame" aria-label="Puppy Park game">
+        <div id="game-container"></div>
+        <div class="hud-tip" id="hud-tip">Explore the park and ask the dogs for clues.</div>
+      </section>
+      <footer class="statusbar">
+        <div class="status-copy"><span class="paw">✦</span><span id="status-text">Three friendly dogs may know the way.</span></div>
+        <div class="clue-count" id="clue-count">0 / 3 CLUES</div>
+      </footer>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>
