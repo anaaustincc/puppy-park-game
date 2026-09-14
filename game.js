@@ -23,6 +23,7 @@ class ParkScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(palette.sky);
     this.drawPark();
     this.interactables = [];
+    this.dogs = [];
     this.clues = 0;
     this.talking = false;
     this.createDog(485, 325, 0.72, palette.blue, 'MILO', 'A golden blur ran toward the pond!');
@@ -49,10 +50,13 @@ class ParkScene extends Phaser.Scene {
     const right = this.cursors.right.isDown || this.keys.D.isDown;
     const up = this.cursors.up.isDown || this.keys.W.isDown;
     const down = this.cursors.down.isDown || this.keys.S.isDown;
+    const moving = left || right || up || down;
     this.player.body.setVelocity((right - left) * speed, (down - up) * speed);
-    if (left || right || up || down) this.player.flipX = left;
+    if (moving) this.player.flipX = left;
+    this.player.setScale((this.player.flipX ? -1 : 1) * this.player.baseScale, this.player.baseScale);
     this.player.x = Phaser.Math.Clamp(this.player.x, 42, WIDTH - 42);
     this.player.y = Phaser.Math.Clamp(this.player.y, 116, HEIGHT - 36);
+    this.dogs.forEach((dog) => this.updateDogAnimation(dog));
     const nearby = this.findNearby();
     ui.tip.textContent = nearby ? `Press E to talk to ${nearby.name}` : 'Explore the park and ask the dogs for clues.';
     ui.tip.style.color = nearby ? '#ef715e' : '#263238';
@@ -84,15 +88,61 @@ class ParkScene extends Phaser.Scene {
   pixelText(text, x, y, size, color) { this.add.text(x, y, text, { fontFamily: 'Press Start 2P', fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, '0')}` }).setResolution(2).setDepth(5); }
 
   createDog(x, y, scale, collar, name, clue, player = false) {
-    const dog = this.add.container(x, y).setDepth(10).setScale(scale);
+    const dog = this.add.container(x, y).setDepth(player ? 15 : 10);
+    dog.baseScale = scale;
+    dog.seed = Math.random() * 1000;
+    dog.flipX = false;
+    dog.bodyColor = collar;
+    dog.isPlayer = player;
+    dog.name = name;
+    dog.clue = clue;
+
     const g = this.add.graphics();
-    g.fillStyle(palette.ink); g.fillRect(-20, -24, 40, 44); g.fillRect(-27, -14, 8, 22); g.fillRect(19, -14, 8, 22);
-    g.fillStyle(palette.cream); g.fillRect(-16, -18, 32, 30); g.fillRect(-11, 12, 8, 13); g.fillRect(3, 12, 8, 13);
-    g.fillStyle(collar); g.fillRect(-17, 4, 34, 7); g.fillStyle(palette.ink); g.fillRect(-8, -5, 5, 5); g.fillRect(5, -5, 5, 5); g.fillRect(-3, 3, 7, 4);
-    dog.add(g); if (!player) this.addLabel(dog, name, clue); dog.name = name; dog.clue = clue; dog.isPlayer = player;
+    dog.gfx = g;
+    dog.add(g);
+    this.updateDogAnimation(dog);
+    this.dogs.push(dog);
+
+    if (!player) this.addLabel(dog, name, clue);
     if (!player && clue) this.interactables.push(dog);
     return dog;
   }
+
+  updateDogAnimation(dog) {
+    const t = this.time.now * 0.01 + dog.seed;
+    const controls = this.cursors && this.keys ? {
+      left: this.cursors.left.isDown || this.keys.A.isDown,
+      right: this.cursors.right.isDown || this.keys.D.isDown,
+      up: this.cursors.up.isDown || this.keys.W.isDown,
+      down: this.cursors.down.isDown || this.keys.S.isDown,
+    } : { left: false, right: false, up: false, down: false };
+    const isMoving = dog.isPlayer ? !!(controls.left || controls.right || controls.up || controls.down) : true;
+    const bob = Math.sin(t * 2.2) * 1.5;
+    const step = Math.sin(t * 5) * (isMoving ? 4 : 1.4);
+    const tail = Math.sin(t * 7.5) * (isMoving ? 5 : 2.6);
+    const facing = dog.flipX ? -1 : 1;
+    dog.setScale(facing * dog.baseScale, dog.baseScale);
+
+    dog.gfx.clear();
+    dog.gfx.fillStyle(0x1a2b2e, 1); dog.gfx.fillRect(-12, -9 + bob, 24, 20);
+    dog.gfx.fillStyle(dog.bodyColor, 1); dog.gfx.fillRect(-13, -10 + bob, 26, 18);
+    dog.gfx.fillStyle(0xf9f1da, 1); dog.gfx.fillRect(-9, -5 + bob, 18, 12);
+
+    dog.gfx.fillStyle(0x1a2b2e, 1); dog.gfx.fillRect(-8, -1 + bob, 4, 7 + (isMoving ? Math.abs(step) * 0.25 : 0));
+    dog.gfx.fillRect(4, -1 + bob, 4, 7 + (isMoving ? Math.abs(step) * 0.25 : 0));
+    dog.gfx.fillRect(-10, 9 + bob, 5, 8 + Math.abs(step) * 0.42);
+    dog.gfx.fillRect(5, 9 + bob, 5, 8 + Math.abs(step) * 0.42);
+
+    dog.gfx.fillStyle(0x1a2b2e, 1); dog.gfx.fillRect(-12, -13 + bob, 4, 6); dog.gfx.fillRect(8, -13 + bob, 4, 6);
+    dog.gfx.fillStyle(dog.bodyColor, 1); dog.gfx.fillRect(-11, -16 + bob, 4, 5); dog.gfx.fillRect(7, -16 + bob, 4, 5);
+    dog.gfx.fillStyle(0xf9f1da, 1); dog.gfx.fillRect(-3, -9 + bob, 6, 7); dog.gfx.fillRect(-6, -11 + bob, 4, 4); dog.gfx.fillRect(2, -11 + bob, 4, 4);
+
+    dog.gfx.fillStyle(0x3b2c2a, 1); dog.gfx.fillRect(-11, 3 + bob, 22, 4);
+    dog.gfx.fillStyle(0x1a2b2e, 1); dog.gfx.fillRect(11, -2 + bob, 5, 3); dog.gfx.fillRect(13, -1 + bob, 7, 3 + tail * 0.2);
+    dog.gfx.fillStyle(0xf2c777, 1); dog.gfx.fillRect(-4, -8 + bob, 3, 3); dog.gfx.fillRect(1, -8 + bob, 3, 3);
+    dog.gfx.fillStyle(0x1a2b2e, 1); dog.gfx.fillRect(-2, 2 + bob, 5, 3);
+  }
+
   addLabel(dog, name, clue) { const label = this.add.text(0, -42, name, { fontFamily: 'Press Start 2P', fontSize: '9px', color: '#263238', backgroundColor: '#fff9e8', padding: { x: 5, y: 4 } }).setOrigin(.5).setResolution(2); dog.add(label); }
   findNearby() { return this.interactables.find(dog => dog.clue && Phaser.Math.Distance.Between(this.player.x, this.player.y, dog.x, dog.y) < 70); }
   tryInteract() {
